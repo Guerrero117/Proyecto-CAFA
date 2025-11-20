@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Desencriptar Texto</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <h1>Desencriptar Texto</h1>
+    <textarea id="ciphertext" placeholder="Texto encriptado"></textarea>
+    <button onclick="decryptTextInput()">Desencriptar</button>
+    <div id="result"></div>
+
+    <p><a href="encrypt.html">Ir a Encriptar</a></p>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="js/crypto.js"></script>
+    <script>
+    function decryptTextInput() {
+        const cipher = document.getElementById('ciphertext').value;
+        const text = decryptText(cipher);
+        document.getElementById('result').innerText = text;
+    }
+    </script>
+</body>
+</html>
