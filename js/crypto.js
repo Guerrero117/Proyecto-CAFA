@@ -1,41 +1,26 @@
-// Clave para AES (puede derivarse de la contraseña)
-const key = "clave_super_secreta";
+// crypto.js
+const key = "clave_super_secreta_123";
 
-// Create: Guardar texto encriptado
-function saveEncryptedText(plainText) {
-    let texts = getEncryptedTexts();
-    let ciphertext = CryptoJS.AES.encrypt(plainText, key).toString();
-    texts.push({ id: Date.now(), cipher: ciphertext });
-    localStorage.setItem('texts', JSON.stringify(texts));
-    return ciphertext;
+// Encriptar texto plano
+function encryptText(plain) {
+    if (!plain) return "**No se recibió texto**";
+    try {
+        return CryptoJS.AES.encrypt(plain, key).toString();
+    } catch (e) {
+        console.error("Error al encriptar:", e);
+        return "**Error al encriptar**";
+    }
 }
 
-// Read: Obtener todos los textos encriptados
-function getEncryptedTexts() {
-    let texts = localStorage.getItem('texts');
-    return texts ? JSON.parse(texts) : [];
-}
-
-// Update: Actualizar un texto encriptado
-function updateEncryptedText(id, newPlainText) {
-    let texts = getEncryptedTexts();
-    let ciphertext = CryptoJS.AES.encrypt(newPlainText, key).toString();
-    texts = texts.map(t => {
-        if(t.id === id) t.cipher = ciphertext;
-        return t;
-    });
-    localStorage.setItem('texts', JSON.stringify(texts));
-}
-
-// Delete: Eliminar un texto encriptado
-function deleteEncryptedText(id) {
-    let texts = getEncryptedTexts();
-    texts = texts.filter(t => t.id !== id);
-    localStorage.setItem('texts', JSON.stringify(texts));
-}
-
-// Desencriptar
+// Desencriptar texto cifrado
 function decryptText(cipher) {
-    let bytes = CryptoJS.AES.decrypt(cipher, key);
-    return bytes.toString(CryptoJS.enc.Utf8);
+    if (!cipher) return "**No se recibió texto**";
+    try {
+        const bytes = CryptoJS.AES.decrypt(cipher.trim(), key);
+        const plain = bytes.toString(CryptoJS.enc.Utf8);
+        return plain || "**Texto inválido o llave incorrecta**";
+    } catch (e) {
+        console.error("Error al desencriptar:", e);
+        return "**Error al desencriptar**";
+    }
 }

@@ -1,58 +1,63 @@
-// Funciones de CRUD de usuarios usando localStorage
+const API_URL = "https://sausagelike-nova-bridally.ngrok-free.dev";
 
-// Leer usuarios
-function getUsers() {
-    let users = localStorage.getItem('users');
-    return users ? JSON.parse(users) : [];
-}
 
-// Guardar usuarios
-function saveUsers(users) {
-    localStorage.setItem('users', JSON.stringify(users));
-}
 
-// Create: Registrar usuario
-function registerUser(username, password) {
-    let users = getUsers();
-    if(users.some(u => u.username === username)) {
-        alert("Usuario ya existe");
-        return false;
-    }
-    let hashedPassword = CryptoJS.SHA256(password).toString();
-    users.push({ username, password: hashedPassword });
-    saveUsers(users);
-    alert("Usuario registrado correctamente");
-    return true;
-}
-
-// Read: Validar login
-function loginUser(username, password) {
-    let users = getUsers();
-    let hashedPassword = CryptoJS.SHA256(password).toString();
-    let user = users.find(u => u.username === username && u.password === hashedPassword);
-    if(user) {
-        localStorage.setItem('loggedUser', username);
-        return true;
-    } else {
-        alert("Usuario o contraseña incorrectos");
-        return false;
-    }
-}
-
-// Update: Cambiar contraseña
-function updatePassword(username, newPassword) {
-    let users = getUsers();
-    let hashedPassword = CryptoJS.SHA256(newPassword).toString();
-    users = users.map(u => {
-        if(u.username === username) u.password = hashedPassword;
-        return u;
+// ----- REGISTRO -----
+async function registerUser(username, password) {
+    const response = await fetch(API_URL + "/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
     });
-    saveUsers(users);
+
+    const data = await response.json();
+    alert(data.msg);
+
+    if (data.ok) window.location.href = "index.html";
 }
 
-// Delete: Eliminar usuario
-function deleteUser(username) {
-    let users = getUsers();
-    users = users.filter(u => u.username !== username);
-    saveUsers(users);
+// ----- LOGIN -----
+async function loginUser(username, password) {
+    const response = await fetch(API_URL + "/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+    });
+
+    const data = await response.json();
+
+    if (data.ok) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("userId", data.userId);
+        return true;
+    }
+
+    alert(data.msg);
+    return false;
+}
+
+// ----- GUARDAR CIFRADO -----
+async function saveCipher(cipher) {
+    const response = await fetch(API_URL + "/save-text", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": localStorage.getItem("token")
+        },
+        body: JSON.stringify({ cipher })
+    });
+
+    return await response.json();
+}
+
+// ----- OBTENER HISTORIAL -----
+async function getMyTexts() {
+    const response = await fetch(API_URL + "/my-texts", {
+        method: "GET",
+        headers: {
+            "Authorization": localStorage.getItem("token")
+        }
+    });
+
+    return await response.json();
 }

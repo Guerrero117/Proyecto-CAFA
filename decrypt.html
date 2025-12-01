@@ -3,24 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <title>Desencriptar Texto</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="container">
     <h1>Desencriptar Texto</h1>
-    <textarea id="ciphertext" placeholder="Texto encriptado"></textarea>
-    <button onclick="decryptTextInput()">Desencriptar</button>
-    <div id="result"></div>
+
+    <textarea id="ciphertext" placeholder="Texto cifrado"></textarea><br>
+    <button onclick="decryptAndShow()">Desencriptar</button>
+
+    <h2>Resultado:</h2>
+    <textarea id="result" readonly></textarea>
 
     <p><a href="encrypt.html">Ir a Encriptar</a></p>
+    <button onclick="logout()">Cerrar Sesión</button>
+</div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script src="js/crypto.js"></script>
-    <script>
-    function decryptTextInput() {
-        const cipher = document.getElementById('ciphertext').value;
-        const text = decryptText(cipher);
-        document.getElementById('result').innerText = text;
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<script src="js/crypto.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+const token = localStorage.getItem("token");
+if (!token) window.location.href = "index.html";
+
+function decryptAndShow() {
+    const cipher = document.getElementById("ciphertext").value.trim();
+    if (!cipher) {
+        alert("Escribe un texto cifrado");
+        return;
     }
-    </script>
+    const plain = decryptText(cipher);
+    document.getElementById("result").value = plain;
+}
+
+function logout() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    window.location.href = "index.html";
+}
+</script>
 </body>
 </html>

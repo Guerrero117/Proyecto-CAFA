@@ -3,24 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <title>Encriptar Texto</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="container">
     <h1>Encriptar Texto</h1>
-    <textarea id="plaintext" placeholder="Texto a encriptar"></textarea>
-    <button onclick="encryptText()">Encriptar</button>
-    <div id="result"></div>
+
+    <textarea id="plain" placeholder="Escribe el texto a cifrar"></textarea><br>
+    <button onclick="encryptAndSave()">Cifrar y Guardar</button>
+
+    <h2>Historial</h2>
+    <div id="list"></div>
+    <button onclick="clearHistory()">Borrar Historial</button>
 
     <p><a href="decrypt.html">Ir a Desencriptar</a></p>
+    <button onclick="logout()">Cerrar Sesión</button>
+</div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script src="js/crypto.js"></script>
-    <script>
-    function encryptText() {
-        const text = document.getElementById('plaintext').value;
-        const cipher = saveEncryptedText(text);
-        document.getElementById('result').innerText = cipher;
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<script src="js/crypto.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+const token = localStorage.getItem("token");
+if (!token) window.location.href = "index.html";
+
+async function encryptAndSave() {
+    const text = document.getElementById("plain").value.trim();
+    if (!text) {
+        alert("Escribe un texto");
+        return;
     }
-    </script>
+    const cipher = encryptText(text);
+
+    const res = await fetch("/save-text", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": token
+        },
+        body: JSON.stringify({ cipher })
+    });
+    const data = await res.json();
+    if (data.ok) {
+        alert("Texto guardado correctamente");
+        loadList();
+    } else {
+        alert("Error guardando el texto");
+    }
+}
+
+async function loadList() {
+    const res = await fetch("/my-texts", { headers: { "Authorization": token } });
+    const data = await res.json();
+    let html = "";
+    if (data.ok) {
+        data.rows.forEach(item => html += `<p>${item.cipher}</p>`);
+    }
+    document.getElementById("list").innerHTML = html;
+}
+
+// ===== NUEVA FUNCIÓN: Solo limpia lo que se ve en la página =====
+function clearHistory() {
+    document.getElementById("list").innerHTML = "";
+}
+
+function logout() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    window.location.href = "index.html";
+}
+
+loadList();
+</script>
 </body>
 </html>
