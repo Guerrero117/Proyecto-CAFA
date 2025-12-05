@@ -15,24 +15,17 @@
         <p>¿Ya tienes cuenta? <a href="index.html">Inicia sesión</a></p>
     </div>
 
+    <script src="js/auth.js"></script>
     <script>
     async function register() {
         const username = document.getElementById("username").value.trim();
         const password = document.getElementById("password").value.trim();
-        if (!username || !password) return alert("Completa todos los campos");
-
-        const res = await fetch("/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password })
-        });
-        const data = await res.json();
-        if (data.ok) {
-            alert("Usuario registrado correctamente");
-            window.location.href = "index.html";
-        } else {
-            alert(data.msg);
+        if (!username || !password) {
+            alert("Completa todos los campos");
+            return;
         }
+
+        await registerUser(username, password);
     }
     </script>
 </body>

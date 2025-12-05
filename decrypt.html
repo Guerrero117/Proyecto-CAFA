@@ -19,28 +19,31 @@
     <button onclick="logout()">Cerrar Sesión</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-<script src="js/crypto.js"></script>
 <script src="js/auth.js"></script>
 
 <script>
-const token = localStorage.getItem("token");
-if (!token) window.location.href = "index.html";
+// Verificar autenticación al cargar
+(async function() {
+    const isAuthenticated = await verifyAuth();
+    if (!isAuthenticated) {
+        window.location.href = "index.html";
+    }
+})();
 
-function decryptAndShow() {
+async function decryptAndShow() {
     const cipher = document.getElementById("ciphertext").value.trim();
     if (!cipher) {
         alert("Escribe un texto cifrado");
         return;
     }
-    const plain = decryptText(cipher);
-    document.getElementById("result").value = plain;
-}
 
-function logout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
-    window.location.href = "index.html";
+    // Descifrar en el servidor
+    const result = await decryptText(cipher);
+    if (result.ok) {
+        document.getElementById("result").value = result.plainText;
+    } else {
+        document.getElementById("result").value = result.msg || "Error al descifrar";
+    }
 }
 </script>
 </body>

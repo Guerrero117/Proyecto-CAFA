@@ -20,13 +20,16 @@
     <button onclick="logout()">Cerrar Sesión</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-<script src="js/crypto.js"></script>
 <script src="js/auth.js"></script>
 
 <script>
-const token = localStorage.getItem("token");
-if (!token) window.location.href = "index.html";
+// Verificar autenticación al cargar
+(async function() {
+    const isAuthenticated = await verifyAuth();
+    if (!isAuthenticated) {
+        window.location.href = "index.html";
+    }
+})();
 
 async function encryptAndSave() {
     const text = document.getElementById("plain").value.trim();
@@ -34,44 +37,50 @@ async function encryptAndSave() {
         alert("Escribe un texto");
         return;
     }
-    const cipher = encryptText(text);
 
-    const res = await fetch("/save-text", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": token
-        },
-        body: JSON.stringify({ cipher })
-    });
-    const data = await res.json();
-    if (data.ok) {
+    // Cifrar en el servidor
+    const encryptResult = await encryptText(text);
+    if (!encryptResult.ok) {
+        alert(encryptResult.msg || "Error al cifrar texto");
+        return;
+    }
+
+    // Guardar texto cifrado
+    const saveResult = await saveCipher(encryptResult.cipher);
+    if (saveResult.ok) {
         alert("Texto guardado correctamente");
+        document.getElementById("plain").value = "";
         loadList();
     } else {
-        alert("Error guardando el texto");
+        alert(saveResult.msg || "Error guardando el texto");
     }
 }
 
 async function loadList() {
-    const res = await fetch("/my-texts", { headers: { "Authorization": token } });
-    const data = await res.json();
+    const data = await getMyTexts();
     let html = "";
-    if (data.ok) {
-        data.rows.forEach(item => html += `<p>${item.cipher}</p>`);
+    if (data.ok && data.rows) {
+        if (data.rows.length === 0) {
+            html = "<p>No hay textos guardados</p>";
+        } else {
+            data.rows.forEach(item => {
+                const date = new Date(item.created_at).toLocaleString('es-ES');
+                html += `<div style="margin: 10px 0; padding: 10px; background: #f1f2f6; border-radius: 8px;">
+                    <p style="word-break: break-all; margin: 5px 0;">${item.cipher}</p>
+                    <small style="color: #666;">${date}</small>
+                </div>`;
+            });
+        }
+    } else {
+        html = "<p>Error al cargar el historial</p>";
     }
     document.getElementById("list").innerHTML = html;
 }
 
-// ===== NUEVA FUNCIÓN: Solo limpia lo que se ve en la página =====
 function clearHistory() {
-    document.getElementById("list").innerHTML = "";
-}
-
-function logout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
-    window.location.href = "index.html";
+    if (confirm("¿Estás seguro de que quieres limpiar el historial de la vista?")) {
+        document.getElementById("list").innerHTML = "";
+    }
 }
 
 loadList();
