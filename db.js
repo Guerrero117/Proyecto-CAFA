@@ -1,25 +1,10 @@
 require("dotenv").config();
-const { Pool } = require("pg");
-
-// ===== SUPABASE: PostgreSQL (Producción) =====
-const pool = new Pool({
-    user: process.env.DB_USER,        // postgres
-    password: process.env.DB_PASSWORD, // tu contraseña
-    host: process.env.DB_HOST,        // db.rhscaieuhyzlsgnwvxll.supabase.co
-    port: process.env.DB_PORT,        // 5432
-    database: process.env.DB_NAME,    // proyecto
-    ssl: {
-        rejectUnauthorized: false
-    }
-});
-
-pool.on("connect", () => {
-    console.log("Conexión exitosa a Supabase PostgreSQL");
-});
 
 // ===== MODO LOCAL (SQLite) - Para pruebas sin Supabase =====
-// Para usar SQLite local, comenta la sección SUPABASE y descomenta la sección LOCAL
-/*
+// Para usar SQLite local, descomenta la sección LOCAL y comenta la sección SUPABASE
+// Para volver a Supabase, invierte los comentarios
+
+// ===== LOCAL: SQLite (Para pruebas) =====
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const dbPath = path.join(__dirname, 'local.db');
@@ -83,6 +68,25 @@ const pool = {
         });
     }
 };
+
+// ===== SUPABASE: PostgreSQL (Producción) - COMENTADO PARA PRUEBAS LOCALES =====
+/*
+const { Pool } = require("pg");
+
+const pool = new Pool({
+    user: process.env.DB_USER,        // postgres
+    password: process.env.DB_PASSWORD, // tu contraseña
+    host: process.env.DB_HOST,        // db.rhscaieuhyzlsgnwvxll.supabase.co
+    port: process.env.DB_PORT,        // 5432
+    database: process.env.DB_NAME,    // proyecto
+    ssl: {
+        rejectUnauthorized: false
+    }
+});
+
+pool.on("connect", () => {
+    console.log("Conexión exitosa a Supabase PostgreSQL");
+});
 */
 
 module.exports = { pool };
