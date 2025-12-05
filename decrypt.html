@@ -24,10 +24,27 @@
 <script>
 // Verificar autenticación al cargar
 (async function() {
+    // Primero verificar si hay una sesión activa en localStorage
+    const activeTab = localStorage.getItem('cafa-session-active');
+    
+    // Si no hay sesión activa marcada, esta pestaña definitivamente no tiene sesión
+    // Redirigir inmediatamente sin hacer petición al servidor
+    if (!activeTab) {
+        window.location.href = "index.html";
+        return;
+    }
+    
+    // Si hay una sesión activa, verificar con el servidor
     const isAuthenticated = await verifyAuth();
     if (!isAuthenticated) {
+        // Si el servidor dice que no está autenticado, limpiar y redirigir
+        clearSessionTracking();
         window.location.href = "index.html";
+        return;
     }
+    
+    // Si llegamos aquí, la pestaña tiene sesión válida
+    // verifyAuth() ya marcó la pestaña como activa si es necesario
 })();
 
 async function decryptAndShow() {

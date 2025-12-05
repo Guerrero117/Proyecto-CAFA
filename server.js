@@ -11,6 +11,10 @@ const path = require("path");
 
 const app = express();
 
+// ===== ALMACENAMIENTO DE SESIONES ACTIVAS (Single-tab Session) =====
+// Almacena userId -> sessionId para permitir solo una sesión por usuario
+const activeSessions = new Map();
+
 // Configuración CORS para cookies
 app.use(cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
@@ -151,16 +155,29 @@ app.post("/login", async (req, res) => {
             return res.json({ ok: false, msg: "Contraseña incorrecta" });
         }
 
-        // Generar access token (corta duración)
+        // ===== SINGLE-TAB SESSION: Generar sessionId único =====
+        const crypto = require('crypto');
+        const sessionId = crypto.randomBytes(32).toString('hex');
+        
+        // Invalidar sesión anterior si existe (solo una sesión activa por usuario)
+        if (activeSessions.has(user.id)) {
+            const oldSessionId = activeSessions.get(user.id);
+            console.log(`Sesión anterior invalidada para usuario ${user.id}: ${oldSessionId}`);
+        }
+        
+        // Guardar nueva sesión activa
+        activeSessions.set(user.id, sessionId);
+
+        // Generar access token (corta duración) con sessionId
         const accessToken = jwt.sign(
-            { username: user.username, id: user.id, type: 'access' },
+            { username: user.username, id: user.id, type: 'access', sessionId },
             SECRET_KEY,
             { expiresIn: "15m" }
         );
 
-        // Generar refresh token (larga duración)
+        // Generar refresh token (larga duración) con sessionId
         const refreshToken = jwt.sign(
-            { username: user.username, id: user.id, type: 'refresh' },
+            { username: user.username, id: user.id, type: 'refresh', sessionId },
             REFRESH_SECRET_KEY,
             { expiresIn: "7d" }
         );
@@ -181,7 +198,15 @@ app.post("/login", async (req, res) => {
             maxAge: 15 * 60 * 1000 // 15 minutos
         });
 
-        res.json({ ok: true, msg: "Login correcto", userId: user.id });
+        // Guardar sessionId en cookie para verificación
+        res.cookie('sessionId', sessionId, {
+            httpOnly: true,
+            secure: NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 15 * 60 * 1000 // 15 minutos
+        });
+
+        res.json({ ok: true, msg: "Login correcto", userId: user.id, sessionId });
     } catch (err) {
         console.error("Error al iniciar sesión:", err);
         res.json({ ok: false, msg: "Error al iniciar sesión" });
@@ -208,6 +233,26 @@ function verifyToken(req, res, next) {
         // Verificar que sea un access token
         if (decoded.type !== 'access') {
             return res.status(401).json({ ok: false, msg: "Token inválido" });
+        }
+        
+        // ===== SINGLE-TAB SESSION: Verificar que la sesión sea válida =====
+        const sessionId = req.cookies.sessionId;
+        const storedSessionId = activeSessions.get(decoded.id);
+        
+        if (!sessionId || !storedSessionId || sessionId !== storedSessionId) {
+            // Sesión inválida (otra pestaña inició sesión o sesión expirada)
+            res.clearCookie('accessToken');
+            res.clearCookie('refreshToken');
+            res.clearCookie('sessionId');
+            return res.status(401).json({ ok: false, msg: "Sesión inválida. Por favor, inicia sesión nuevamente." });
+        }
+        
+        // Verificar que el sessionId del token coincida
+        if (decoded.sessionId !== sessionId) {
+            res.clearCookie('accessToken');
+            res.clearCookie('refreshToken');
+            res.clearCookie('sessionId');
+            return res.status(401).json({ ok: false, msg: "Sesión inválida. Por favor, inicia sesión nuevamente." });
         }
         
         req.user = decoded;
@@ -244,9 +289,22 @@ async function refreshAccessToken(req, res, next) {
 
         const user = result.rows[0];
 
-        // Generar nuevo access token
+        // ===== SINGLE-TAB SESSION: Verificar que la sesión siga siendo válida =====
+        const sessionId = req.cookies.sessionId;
+        const storedSessionId = activeSessions.get(user.id);
+        
+        if (!sessionId || !storedSessionId || sessionId !== storedSessionId) {
+            // Sesión inválida
+            activeSessions.delete(user.id);
+            res.clearCookie('refreshToken');
+            res.clearCookie('accessToken');
+            res.clearCookie('sessionId');
+            return res.status(401).json({ ok: false, msg: "Sesión inválida. Por favor, inicia sesión nuevamente." });
+        }
+
+        // Generar nuevo access token con el mismo sessionId
         const newAccessToken = jwt.sign(
-            { username: user.username, id: user.id, type: 'access' },
+            { username: user.username, id: user.id, type: 'access', sessionId },
             SECRET_KEY,
             { expiresIn: "15m" }
         );
@@ -277,9 +335,15 @@ app.post("/refresh-token", async (req, res) => {
 });
 
 // ===== LOGOUT =====
-app.post("/logout", (req, res) => {
+app.post("/logout", verifyToken, (req, res) => {
+    // Eliminar sesión activa
+    if (req.user && req.user.id) {
+        activeSessions.delete(req.user.id);
+    }
+    
     res.clearCookie('accessToken');
     res.clearCookie('refreshToken');
+    res.clearCookie('sessionId');
     res.json({ ok: true, msg: "Sesión cerrada" });
 });
 
